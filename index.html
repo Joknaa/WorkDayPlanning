@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kokoro Daily Log Generator</title>
+  <style>
+    :root {
+      --bg1: #0f172a;
+      --bg2: #111827;
+      --panel: rgba(17, 24, 39, 0.78);
+      --panel-strong: rgba(15, 23, 42, 0.92);
+      --line: rgba(148, 163, 184, 0.16);
+      --text: #e5eefc;
+      --muted: #9fb0ca;
+      --accent: #60a5fa;
+      --accent-2: #8b5cf6;
+      --success: #34d399;
+      --danger: #fb7185;
+      --shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.16), transparent 25%),
+        linear-gradient(145deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+      padding: 28px;
+    }
+
+    .shell {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .title-wrap p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      max-width: 760px;
+    }
+
+    .badge {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.12);
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      color: #cfe2ff;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(540px, 1.15fr) minmax(360px, 0.85fr);
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 22px 24px 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .card-header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .section {
+      padding: 20px 24px;
+    }
+
+    .top-fields {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      color: #d8e5fb;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    input, button, textarea {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="time"],
+    input[type="date"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: rgba(96, 165, 250, 0.7);
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
+    }
+
+    .activities-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .activities-head h3,
+    .summary h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .activities {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .activity-row {
+      display: grid;
+      grid-template-columns: 88px 88px minmax(0, 1fr) 54px;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.48);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .activity-row .index {
+      grid-column: 1 / -1;
+      font-size: 0.83rem;
+      color: #cfe2ff;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: -2px;
+    }
+
+    .remove-btn,
+    .ghost-btn,
+    .primary-btn,
+    .copy-btn {
+      border: none;
+      cursor: pointer;
+      transition: transform 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+    }
+
+    .remove-btn:hover,
+    .ghost-btn:hover,
+    .primary-btn:hover,
+    .copy-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .remove-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: rgba(244, 63, 94, 0.12);
+      color: #ffc9d4;
+      font-size: 1.1rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .ghost-btn,
+    .primary-btn,
+    .copy-btn {
+      padding: 11px 16px;
+      border-radius: 14px;
+      font-weight: 700;
+    }
+
+    .ghost-btn {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      box-shadow: 0 10px 24px rgba(96, 165, 250, 0.24);
+    }
+
+    .copy-btn {
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      color: white;
+      box-shadow: 0 10px 24px rgba(16, 185, 129, 0.22);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .pill .label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+
+    .pill .value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .output-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .output-area {
+      flex: 1;
+      min-height: 610px;
+      resize: vertical;
+      line-height: 1.6;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 0.96rem;
+      white-space: pre;
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 24px;
+      color: var(--success);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .hint-list {
+      margin: 16px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 1150px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .output-area {
+        min-height: 360px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 14px;
+      }
+
+      .top-fields,
+      .summary {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .activity-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .activity-row .name-wrap {
+        grid-column: 1 / -1;
+      }
+
+      .activity-row .remove-wrap {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .top-fields,
+      .summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div class="title-wrap">
+        <h1>Kokoro Daily Log Generator</h1>
+        <p>Enter your day start, add activity durations, and get a copy-ready log in Kokoro's expected format. The app automatically chains times from one activity to the next.</p>
+      </div>
+      <div class="badge">Standalone • No install • One HTML file</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <h2>Plan your day</h2>
+          <p>Set the date, your session time, and the blocks you expect to work through. The total session defaults to 8 hours unless you override it.</p>
+        </div>
+
+        <div class="section">
+          <div class="top-fields">
+            <div class="field">
+              <label for="logDate">Date</label>
+              <input id="logDate" type="date" />
+            </div>
+            <div class="field">
+              <label for="startTime">Session start</label>
+              <input id="startTime" type="time" value="09:30" />
+            </div>
+            <div class="field">
+              <label for="sessionHours">Session hours</label>
+              <input id="sessionHours" type="number" min="0" step="1" value="8" />
+            </div>
+            <div class="field">
+              <label for="sessionMinutes">Session extra minutes</label>
+              <input id="sessionMinutes" type="number" min="0" step="5" value="0" />
+            </div>
+            <div class="field">
+              <label for="displayName">Name tag</label>
+              <input id="displayName" type="text" value="Oknaa" placeholder="Oknaa" />
+            </div>
+            <div class="field">
+              <label for="finalLine">Final line text</label>
+              <input id="finalLine" type="text" value="Finishing the day" placeholder="Finishing the day" />
+            </div>
+            <div class="field" style="grid-column: span 2;">
+              <label for="notes">Optional note</label>
+              <input id="notes" type="text" placeholder="Not included in output, just for your own reminder" />
+            </div>
+          </div>
+
+          <div class="summary">
+            <div class="pill">
+              <div class="label">Session finish</div>
+              <div class="value" id="sessionFinishLabel">17:30</div>
+            </div>
+            <div class="pill">
+              <div class="label">Planned activity time</div>
+              <div class="value" id="plannedDurationLabel">00:00</div>
+            </div>
+            <div class="pill">
+              <div class="label">Remaining time</div>
+              <div class="value" id="remainingLabel">08:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" style="padding-top: 0;">
+          <div class="activities-head">
+            <div>
+              <h3>Activities</h3>
+              <div class="muted">Each row is: hours + minutes + activity name. Times are computed automatically in order.</div>
+            </div>
+          </div>
+
+          <div id="activities" class="activities"></div>
+
+          <div class="toolbar">
+            <button id="addRowBtn" class="ghost-btn" type="button">+ Add activity</button>
+            <button id="fillDemoBtn" class="ghost-btn" type="button">Fill example</button>
+            <button id="clearBtn" class="ghost-btn" type="button">Clear activities</button>
+            <button id="generateBtn" class="primary-btn" type="button">Generate log</button>
+          </div>
+
+          <ul class="hint-list">
+            <li>If your activities do not cover the whole session, the last line will automatically use the remaining time.</li>
+            <li>If your activities exceed the session duration, you will get a warning so you can correct it quickly.</li>
+            <li>The generated text is ready for copy-paste as-is.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card output-panel">
+        <div class="card-header">
+          <h2>Generated log</h2>
+          <p>Review it, then copy it directly.</p>
+        </div>
+        <div class="section" style="display:flex; flex-direction:column; height:100%;">
+          <textarea id="output" class="output-area" spellcheck="false"></textarea>
+          <div class="toolbar">
+            <button id="copyBtn" class="copy-btn" type="button">Copy log</button>
+            <button id="refreshBtn" class="ghost-btn" type="button">Refresh output</button>
+          </div>
+          <div id="status" class="status"></div>
+          <div class="footer-note">The output keeps the same structure you showed: separators, date, session time, @name, indented activity lines, then closing line.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <template id="activityRowTemplate">
+    <div class="activity-row">
+      <div class="index"></div>
+      <div class="field">
+        <label>Hours</label>
+        <input class="dur-hours" type="number" min="0" step="1" value="0" />
+      </div>
+      <div class="field">
+        <label>Minutes</label>
+        <input class="dur-minutes" type="number" min="0" step="5" value="0" />
+      </div>
+      <div class="field name-wrap">
+        <label>Activity</label>
+        <input class="activity-name" type="text" placeholder="Continue working on the Desalination simulation" />
+      </div>
+      <div class="remove-wrap">
+        <button class="remove-btn" type="button" title="Remove this activity">✕</button>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const els = {
+      logDate: document.getElementById('logDate'),
+      startTime: document.getElementById('startTime'),
+      sessionHours: document.getElementById('sessionHours'),
+      sessionMinutes: document.getElementById('sessionMinutes'),
+      displayName: document.getElementById('displayName'),
+      finalLine: document.getElementById('finalLine'),
+      notes: document.getElementById('notes'),
+      activities: document.getElementById('activities'),
+      output: document.getElementById('output'),
+      status: document.getElementById('status'),
+      sessionFinishLabel: document.getElementById('sessionFinishLabel'),
+      plannedDurationLabel: document.getElementById('plannedDurationLabel'),
+      remainingLabel: document.getElementById('remainingLabel'),
+      addRowBtn: document.getElementById('addRowBtn'),
+      fillDemoBtn: document.getElementById('fillDemoBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      generateBtn: document.getElementById('generateBtn'),
+      copyBtn: document.getElementById('copyBtn'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      rowTemplate: document.getElementById('activityRowTemplate')
+    };
+
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function timeStringToMinutes(value) {
+      if (!value || !value.includes(':')) return 0;
+      const [h, m] = value.split(':').map(Number);
+      return (h * 60) + m;
+    }
+
+    function minutesToTimeString(totalMinutes) {
+      const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+      const h = Math.floor(normalized / 60);
+      const m = normalized % 60;
+      return `${pad2(h)}:${pad2(m)}`;
+    }
+
+    function minutesToDurationString(totalMinutes) {
+      const abs = Math.max(0, totalMinutes);
+      const h = Math.floor(abs / 60);
+      const m = abs % 60;
+      return `${pad2(h)}:${pad2(m)}`;
+    }
+
+    function formatDateLabel(dateValue) {
+      if (!dateValue) return 'Wed, 22/04/2026';
+      const date = new Date(dateValue + 'T12:00:00');
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return `${weekdays[date.getDay()]}, ${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+    }
+
+    function getSessionTotalMinutes() {
+      const h = Math.max(0, parseInt(els.sessionHours.value || '0', 10));
+      const m = Math.max(0, parseInt(els.sessionMinutes.value || '0', 10));
+      return h * 60 + m;
+    }
+
+    function getRows() {
+      return Array.from(els.activities.querySelectorAll('.activity-row'));
+    }
+
+    function readActivities() {
+      return getRows().map((row, index) => {
+        const hours = Math.max(0, parseInt(row.querySelector('.dur-hours').value || '0', 10));
+        const minutes = Math.max(0, parseInt(row.querySelector('.dur-minutes').value || '0', 10));
+        const name = row.querySelector('.activity-name').value.trim();
+        return {
+          index,
+          duration: (hours * 60) + minutes,
+          name
+        };
+      }).filter(item => item.duration > 0 && item.name.length > 0);
+    }
+
+    function createRow(hours = 0, minutes = 0, name = '') {
+      const fragment = els.rowTemplate.content.cloneNode(true);
+      const row = fragment.querySelector('.activity-row');
+      row.querySelector('.dur-hours').value = hours;
+      row.querySelector('.dur-minutes').value = minutes;
+      row.querySelector('.activity-name').value = name;
+
+      row.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', () => {
+          refreshRowTitles();
+          updateSummary();
+          generateLog();
+        });
+      });
+
+      row.querySelector('.remove-btn').addEventListener('click', () => {
+        row.remove();
+        refreshRowTitles();
+        updateSummary();
+        generateLog();
+      });
+
+      els.activities.appendChild(fragment);
+      refreshRowTitles();
+      updateSummary();
+      generateLog();
+    }
+
+    function refreshRowTitles() {
+      getRows().forEach((row, i) => {
+        row.querySelector('.index').textContent = `Activity ${i + 1}`;
+      });
+    }
+
+    function updateSummary() {
+      const startMin = timeStringToMinutes(els.startTime.value);
+      const sessionTotal = getSessionTotalMinutes();
+      const finishMin = startMin + sessionTotal;
+      const activities = readActivities();
+      const planned = activities.reduce((sum, item) => sum + item.duration, 0);
+      const remaining = sessionTotal - planned;
+
+      els.sessionFinishLabel.textContent = minutesToTimeString(finishMin);
+      els.plannedDurationLabel.textContent = minutesToDurationString(planned);
+      els.remainingLabel.textContent = remaining >= 0
+        ? minutesToDurationString(remaining)
+        : `-${minutesToDurationString(Math.abs(remaining))}`;
+      els.remainingLabel.style.color = remaining < 0 ? '#ffc4d1' : '';
+    }
+
+    function setStatus(message, isError = false) {
+      els.status.textContent = message;
+      els.status.classList.toggle('error', isError);
+    }
+
+    function buildLogText() {
+      const startTime = els.startTime.value || '09:30';
+      const startMin = timeStringToMinutes(startTime);
+      const sessionTotal = getSessionTotalMinutes();
+      const finishMin = startMin + sessionTotal;
+      const dateLabel = formatDateLabel(els.logDate.value);
+      const displayName = (els.displayName.value || 'Oknaa').trim();
+      const finalLine = (els.finalLine.value || 'Finishing the day').trim();
+      const activities = readActivities();
+
+      let lines = [];
+      lines.push('================');
+      lines.push(dateLabel);
+      lines.push(`${minutesToTimeString(startMin)} -> ${minutesToTimeString(finishMin)}`);
+      lines.push(`@${displayName.replace(/^@+/, '')}`);
+      lines.push('');
+
+      let cursor = startMin;
+      for (const activity of activities) {
+        const next = cursor + activity.duration;
+        lines.push(`  ${minutesToTimeString(cursor)} -> ${minutesToTimeString(next)}: ${activity.name}`);
+        cursor = next;
+      }
+
+      lines.push(`  ${minutesToTimeString(cursor)} -> ${finalLine}`);
+      lines.push('================');
+
+      return {
+        text: lines.join('\n'),
+        overflow: cursor > finishMin,
+        remainingMinutes: finishMin - cursor,
+        plannedMinutes: cursor - startMin,
+        finishMin,
+        cursor
+      };
+    }
+
+    function generateLog() {
+      const result = buildLogText();
+      els.output.value = result.text;
+
+      if (result.overflow) {
+        setStatus('Your activity durations exceed the session length. Adjust one or more rows.', true);
+      } else if (result.remainingMinutes > 0) {
+        setStatus(`There is ${minutesToDurationString(result.remainingMinutes)} remaining, so the final line starts at ${minutesToTimeString(result.cursor)}.`);
+      } else {
+        setStatus('Perfect fit. Your activities fill the whole session exactly.');
+      }
+    }
+
+    async function copyOutput() {
+      try {
+        await navigator.clipboard.writeText(els.output.value);
+        setStatus('Log copied to clipboard.');
+      } catch {
+        els.output.select();
+        document.execCommand('copy');
+        setStatus('Log copied to clipboard.');
+      }
+    }
+
+    function clearActivities() {
+      els.activities.innerHTML = '';
+      createRow();
+      createRow();
+      createRow();
+    }
+
+    function fillDemo() {
+      els.startTime.value = '09:30';
+      els.sessionHours.value = '8';
+      els.sessionMinutes.value = '5';
+      els.displayName.value = 'Oknaa';
+      els.finalLine.value = 'Finishing the day';
+      els.activities.innerHTML = '';
+      createRow(1, 0, 'Continue working on the Desalination simulation');
+      createRow(1, 0, 'Meeting with team');
+      createRow(0, 15, 'Break');
+      createRow(5, 0, 'Continue working on the Desalination simulation');
+      generateLog();
+    }
+
+    function setDefaultDate() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = pad2(now.getMonth() + 1);
+      const dd = pad2(now.getDate());
+      els.logDate.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    els.addRowBtn.addEventListener('click', () => createRow());
+    els.fillDemoBtn.addEventListener('click', fillDemo);
+    els.clearBtn.addEventListener('click', clearActivities);
+    els.generateBtn.addEventListener('click', generateLog);
+    els.copyBtn.addEventListener('click', copyOutput);
+    els.refreshBtn.addEventListener('click', generateLog);
+
+    [
+      els.logDate,
+      els.startTime,
+      els.sessionHours,
+      els.sessionMinutes,
+      els.displayName,
+      els.finalLine
+    ].forEach(input => input.addEventListener('input', () => {
+      updateSummary();
+      generateLog();
+    }));
+
+    setDefaultDate();
+    clearActivities();
+    generateLog();
+  </script>
+</body>
+</html>
