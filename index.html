@@ -640,6 +640,7 @@
       const activities = readActivities();
 
       let lines = [];
+      lines.push('```');
       lines.push('================');
       lines.push(dateLabel);
       lines.push(`${minutesToTimeString(startMin)} -> ${minutesToTimeString(finishMin)}`);
@@ -655,6 +656,7 @@
 
       lines.push(`  ${minutesToTimeString(cursor)} -> ${finalLine}`);
       lines.push('================');
+      lines.push('```');
 
       return {
         text: lines.join('\n'),
